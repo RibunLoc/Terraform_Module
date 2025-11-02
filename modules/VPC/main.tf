@@ -16,6 +16,7 @@ locals {
     "com.amazonaws.${data.aws_region.current.name}.ssmmessages",
     "com.amazonaws.${data.aws_region.current.name}.ec2messages",
   ]
+
 }
 
 resource "aws_vpc" "this" {
