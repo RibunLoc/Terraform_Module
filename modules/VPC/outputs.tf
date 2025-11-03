@@ -18,6 +18,11 @@ output "nat_gateway_id" {
   value       = var.enable_nat_gateway ? aws_nat_gateway.nat[0].id : null
 }
 
+output "security_group_default_id" {
+  description = "ID of the default security group"
+  value       = aws_security_group.default.id
+}
+
 output "public_subnets_cidr_blocks" {
   description = "List CIDR of public subnet"
   value       = values(aws_subnet.public)[*].cidr_block

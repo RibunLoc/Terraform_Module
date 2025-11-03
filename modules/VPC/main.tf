@@ -126,6 +126,31 @@ resource "aws_route_table_association" "private_assoc" {
   route_table_id = aws_route_table.private[0].id
 }
 
+#resource "aws_security_group" "default" {
+resource "aws_security_group" "default" {
+  vpc_id      = aws_vpc.this.id
+  name        = "${var.name}-default-sg"
+  description = "Default security group for VPC ${var.name}"
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.name}-default-sg-tags"
+  })
+}
+
 # Security Group for Endpoints 
 resource "aws_security_group" "vpc_endpoints" {
   name        = "${var.name}-vpce-sg"

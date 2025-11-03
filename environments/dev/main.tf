@@ -15,106 +15,91 @@ module "vpc" {
 
   name                       = "Dev-VPC"
   cidr_block                 = "10.0.0.0/16"
-  enable_nat_gateway         = true
+  enable_nat_gateway         = false
   az_count                   = 2
-  enable_ssm_endpoints       = true
+  enable_ssm_endpoints       = false
   enable_s3_gateway_endpoint = false
+  ssm_endpoints_subnet_ids   = module.vpc.public_subnets_ids
 }
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"] // Canonical
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
-  }
-}
+# module "image_builder" {
+#   source = "../../modules/image-builder"
 
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "dev-ec2-instance-profile"
-  role = aws_iam_role.ec2_role.name
-}
+#   base_ami_owner       = "099720109477" # Canonical
+#   base_ami_name_filter = "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"
+#   name                 = "dev-image-builder"
+#   subnet_id            = module.vpc.public_subnets_ids[0]
+#   security_group_ids   = [module.vpc.security_group_default_id]
+# }
 
-data "aws_iam_policy_document" "assume_role" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-resource "aws_iam_role" "ec2_role" {
-  name               = "Test-ec2-role"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "policy_attachment" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-module "alb" {
-  source = "../../modules/application-load-balancer"
-
-  name              = "dev-alb"
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets_ids
-  health_check_path = "/"
-  target_type       = "instance"
-  tags              = local.common_tags
-}
+# data "aws_ami" "ubuntu" {
+#   most_recent = true
+#   owners      = ["099720109477"] // Canonical
+#   filter {
+#     name   = "name"
+#     values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+#   }
+# }
 
 
-module "web_asg" {
-  source     = "../../modules/auto-scaling-group"
-  name       = "dev-web"
-  subnet_ids = module.vpc.private_subnets_ids
-  vpc_id     = module.vpc.vpc_id
-  additional_ingress_rules = [
-    {
-      description = "Allow HTTP"
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
 
-  ami_id               = data.aws_ami.ubuntu.id
-  instance_type        = "t2.micro"
-  key_name             = "sshkeyVirginia"
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+# module "alb" {
+#   source = "../../modules/application-load-balancer"
 
-  min_size         = 1
-  desired_capacity = 1
-  max_size         = 3
+#   name              = "dev-alb"
+#   vpc_id            = module.vpc.vpc_id
+#   public_subnet_ids = module.vpc.public_subnets_ids
+#   health_check_path = "/"
+#   target_type       = "instance"
+#   tags              = local.common_tags
+# }
 
-  target_group_arns = [module.alb.target_group_arn]
-  health_check_type = "ELB"
 
-  user_data_vars = {
-    ENV = "dev"
-  }
+# module "web_asg" {
+#   source     = "../../modules/auto-scaling-group"
+#   name       = "dev-web"
+#   subnet_ids = module.vpc.private_subnets_ids
+#   vpc_id     = module.vpc.vpc_id
+#   additional_ingress_rules = [
+#     {
+#       description = "Allow HTTP"
+#       from_port   = 80
+#       to_port     = 80
+#       protocol    = "tcp"
+#       cidr_blocks = ["0.0.0.0/0"]
+#     }
+#   ]
 
-  mixed_instances = {
-    enabled              = true
-    on_demand_base       = 1
-    on_demand_percentage = 100
-    spot_max_price       = null
-    override_types       = ["t2.micro"]
-  }
+#   ami_id               = data.aws_ami.ubuntu.id
+#   instance_type        = "t2.micro"
+#   key_name             = "sshkeyVirginia"
+#   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
 
-  cpu_target_percent = 55
-  tags = {
-    "Environment" = "dev"
-    "Service"     = "web"
-  }
-}
+#   min_size         = 1
+#   desired_capacity = 1
+#   max_size         = 3
+
+#   target_group_arns = [module.alb.target_group_arn]
+#   health_check_type = "ELB"
+
+#   user_data_vars = {
+#     ENV = "dev"
+#   }
+
+#   mixed_instances = {
+#     enabled              = true
+#     on_demand_base       = 1
+#     on_demand_percentage = 100
+#     spot_max_price       = null
+#     override_types       = ["t2.micro"]
+#   }
+
+#   cpu_target_percent = 55
+#   tags = {
+#     "Environment" = "dev"
+#     "Service"     = "web"
+#   }
+# }
 
 
 # module "database_MySQL" {
